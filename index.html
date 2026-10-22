@@ -68,30 +68,67 @@
     <button id="copy" disabled>Copy text</button>
   </main>
 
-  <script>
-    const fileInput = document.getElementById("file");
-    const preview = document.getElementById("preview");
-    const extract = document.getElementById("extract");
-    const result = document.getElementById("result");
-    const copy = document.getElementById("copy");
+  
+<script>
+  const API_URL = "https://bamboo-purchase-recede.ngrok-free.dev";
 
-    fileInput.addEventListener("change", () => {
-      const file = fileInput.files[0];
-      if (!file) return;
-      preview.src = URL.createObjectURL(file);
-      preview.style.display = "block";
+  const fileInput = document.getElementById("file");
+  const preview = document.getElementById("preview");
+  const extract = document.getElementById("extract");
+  const result = document.getElementById("result");
+  const copy = document.getElementById("copy");
+
+  fileInput.addEventListener("change", () => {
+    const file = fileInput.files[0];
+    if (!file) return;
+
+    preview.src = URL.createObjectURL(file);
+    preview.style.display = "block";
+    extract.disabled = false;
+    result.textContent = "Image ready. Click Extract Text.";
+  });
+
+  extract.addEventListener("click", async () => {
+    const file = fileInput.files[0];
+    if (!file) return;
+
+    extract.disabled = true;
+    result.textContent = "Extracting text... Please wait.";
+    
+    try {
+      const formData = new FormData();
+      formData.append("image", file);
+
+      const response = await fetch(`${API_URL}/extract`, {
+        method: "POST",
+        body: formData
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "OCR request failed.");
+      }
+
+      result.textContent = data.text || "No text found in this image.";
+    } catch (error) {
+      result.textContent =
+        "Could not extract text: " + error.message +
+        "\nCheck that your Colab runtime and API are running.";
+    } finally {
       extract.disabled = false;
-      result.textContent = "Image ready. OCR connection is our next step.";
-    });
+    }
+  });
 
-    extract.addEventListener("click", () => {
-      result.textContent = "The website is ready; we'll connect the OCR backend next.";
-    });
-
-    copy.addEventListener("click", async () => {
+  copy.addEventListener("click", async () => {
+    try {
       await navigator.clipboard.writeText(result.textContent);
       copy.textContent = "Copied!";
-    });
-  </script>
+      setTimeout(() => copy.textContent = "Copy Text", 1500);
+    } catch {
+      result.textContent += "\n\nCopy failed. Please select the text manually.";
+    }
+  });
+</script>
 </body>
 </html>
